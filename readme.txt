@@ -8,8 +8,7 @@ mvn org.apache.maven.plugins:maven-archetype-plugin:2.4:generate \
 
 
 -- 佈署進 minishift 相關 build 設定 --
-
-Goals 填rclean compile fabric8:deploy -e
+Goals 填 clean compile fabric8:deploy -e
 勾選 Skip Tests
 
 JRE 頁填入：
@@ -25,10 +24,20 @@ JRE 頁填入：
 -Dfabric8.generator.fromMode=docker
 -Dkubernetes.auth.tryKubeConfig=false
 
--- deployment.yml --
 
+-- deployment.yml --
 區段 env 加上：
           - name: ACTIVEMQ_BROKER_USERNAME
             value: admin
           - name: ACTIVEMQ_BROKER_PASSWORD
             value: admin
+
+
+-- Application.java
+就是這個光：
+    @Bean
+    ServletRegistrationBean servletRegistrationBeanCXF() {
+        ServletRegistrationBean servlet = new ServletRegistrationBean(new CXFServlet(), "/cxf/*");
+        servlet.setName("CXFServlet");
+        return servlet;
+    }

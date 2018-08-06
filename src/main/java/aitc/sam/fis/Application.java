@@ -15,19 +15,29 @@
  */
 package aitc.sam.fis;
 
+import org.apache.cxf.transport.servlet.CXFServlet;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.ServletRegistrationBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ImportResource;
 
 /**
  * The Spring-boot main class.
  */
 @SpringBootApplication
-@ImportResource({"classpath:spring/amq.xml", "classpath:spring/camel-context.xml"})
+@ImportResource({ "classpath:spring/amq.xml", "classpath:spring/camel-context.xml" })
 public class Application {
 
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
+    }
+
+    @Bean
+    ServletRegistrationBean servletRegistrationBeanCXF() {
+        ServletRegistrationBean servlet = new ServletRegistrationBean(new CXFServlet(), "/cxf/*");
+        servlet.setName("CXFServlet");
+        return servlet;
     }
 
 }
