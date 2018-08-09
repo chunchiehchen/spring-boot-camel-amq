@@ -2,6 +2,23 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
     xmlns:cxf="http://camel.apache.org/schema/cxf"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation=" http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd ">
+    <bean class="io.netty.handler.codec.string.StringEncoder"
+        id="string-encoder" scope="singleton">
+        <constructor-arg value="UTF-8"/>
+    </bean>
+    <bean class="codec.Coder"
+        factory-method="newLengthFieldBasedFrameDecoder" id="length-decoder">
+        <constructor-arg value="T"/>
+        <constructor-arg value="1048576"/>
+        <constructor-arg value="0"/>
+        <constructor-arg value="4"/>
+        <constructor-arg value="0"/>
+        <constructor-arg value="4"/>
+    </bean>
+    <bean class="proc.Proc01" id="proc01"/>
+    <bean class="proc.Proc02" id="proc02"/>
+    <bean class="proc.MyAggregationStrategy" id="myAggregationStrategy"/>
+    <cxf:cxfEndpoint address="/fnstxn0003" id="SOAP" serviceClass="service.FNSW"/>
     <!-- Camel Routes -->
     <camelContext id="camel" xmlns="http://camel.apache.org/schema/spring">
         <!--
@@ -15,6 +32,43 @@
 
           The amq component ensures to use the broker in the kubernetes cluster.
         -->
+        <endpoint id="TCPSEND" uri="netty4:tcp://10.0.2.2:13456">
+            <property key="encoders" value="#string-encoder"/>
+            <property key="clientMode" value="true"/>
+            <property key="sync" value="false"/>
+        </endpoint>
+        <endpoint id="TCPRECV" uri="netty4:tcp://10.0.2.2:13457">
+            <property key="decoders" value="#length-decoder"/>
+            <property key="clientMode" value="false"/>
+            <property key="sync" value="false"/>
+            <property key="synchronous" value="true"/>
+            <property key="producerPoolMaxActive" value="1"/>
+        </endpoint>
+        <route id="FNSW">
+            <from id="_from1" uri="cxf:bean:SOAP"/>
+            <convertBodyTo id="_convertBodyTo1" type="dto.WhateverRequest"/>
+            <to id="_to1-1" pattern="InOut" uri="amq:RECORD"/>
+        </route>
+        <route id="INPUT">
+            <from id="_from2" uri="amq:RECORD"/>
+            <convertBodyTo id="_convertBodyTo1" type="java.lang.String"/>
+            <to id="_to2-2" pattern="InOut" uri="seda:CHXQ"/>
+            <pollEnrich id="_pollEnrich1" strategyRef="myAggregationStrategy">
+                <simple>activemq:VALLYSOFTQ</simple>
+            </pollEnrich>
+            <to id="_log1-4-1" uri="log:==> pollEnrich ?showHeaders=true"/>
+        </route>
+        <route id="QUEUE">
+            <from id="_from3" uri="seda:CHXQ"/>
+            <to id="_to2-2-2" uri="direct-vm:子流程"/>
+            <to id="_to3-3" pattern="InOnly" uri="ref:TCPSEND"/>
+            <to id="_log3-3" uri="log:整理二省略 ?showHeaders=true"/>
+        </route>
+        <route id="_route2-2-1">
+            <from id="_fromCustom" uri="direct-vm:子流程"/>
+            <process id="_proc01" ref="proc01"/>
+            <convertBodyTo id="_convertBodyTo2-2-1-2" type="java.lang.String"/>
+        </route>
         <route id="generate-order-route" streamCache="true">
             <from id="route-timer" uri="timer:order?period=60000"/>
             <bean id="route-new-order" method="generateOrder" ref="orderGenerator"/>
