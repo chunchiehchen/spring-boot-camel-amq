@@ -46,12 +46,12 @@
         </endpoint>
         <route id="FNSW">
             <from id="_from1" uri="cxf:bean:SOAP"/>
-            <convertBodyTo id="_convertBodyTo1" type="dto.WhateverRequest"/>
+            <convertBodyTo id="_convertBodyTo1-1" type="dto.WhateverRequest"/>
             <to id="_to1-1" pattern="InOut" uri="amq:RECORD"/>
         </route>
         <route id="INPUT">
             <from id="_from2" uri="amq:RECORD"/>
-            <convertBodyTo id="_convertBodyTo1" type="java.lang.String"/>
+            <convertBodyTo id="_convertBodyTo2-1" type="java.lang.String"/>
             <to id="_to2-2" pattern="InOut" uri="seda:CHXQ"/>
             <pollEnrich id="_pollEnrich1" strategyRef="myAggregationStrategy">
                 <simple>activemq:VALLYSOFTQ</simple>
